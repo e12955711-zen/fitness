@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>健身紀錄 (V14.1修復版)</title>
+    <title>健身紀錄 (V15.4完美版)</title>
     
     <!-- PWA 設定 -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -25,6 +25,8 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .bg-gradient-brand { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
         .dark .bg-gradient-brand { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); }
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
@@ -34,7 +36,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p>載入 V14.1 修復版...</p>
+            <p>載入 V15.4 完美版...</p>
         </div>
     </div>
 
@@ -48,8 +50,12 @@
             return `${year}-${month}-${day}`;
         };
 
+        // 全域部位對照表
+        const BODY_PART_LABELS = { 'chest': '胸', 'back': '背', 'legs': '腿', 'shoulders': '肩', 'other': '其他' };
+
+        // --- Icons (加上 shrink-0 確保圖示永遠不會被擠壓變形) ---
         const Icon = ({ path, className }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 ${className || ''}`}>{path}</svg>
         );
 
         const Icons = {
@@ -75,6 +81,8 @@
             ChevronLeft: (p) => <Icon {...p} path={<polyline points="15 18 9 12 15 6" />} />,
             ChevronRight: (p) => <Icon {...p} path={<polyline points="9 18 15 12 9 6" />} />,
             Chart: (p) => <Icon {...p} path={<><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>} />,
+            Check: (p) => <Icon {...p} path={<polyline points="20 6 9 17 4 12" />} />,
+            Play: (p) => <Icon {...p} path={<polygon points="5 3 19 12 5 21 5 3" />} />,
         };
 
         const ChartView = ({ logs, isDarkMode }) => {
@@ -85,99 +93,59 @@
             const exercises = useMemo(() => [...new Set(logs.map(l => l.exercise))].sort(), [logs]);
 
             useEffect(() => {
-                if (exercises.length > 0 && !selectedExercise) {
-                    setSelectedExercise(exercises[0]);
-                }
+                if (exercises.length > 0 && !selectedExercise) setSelectedExercise(exercises[0]);
             }, [exercises]);
 
             useEffect(() => {
                 if (!selectedExercise || !chartRef.current) return;
-
-                const targetLogs = logs
-                    .filter(l => l.exercise === selectedExercise)
-                    .sort((a, b) => new Date(a.date) - new Date(b.date));
-
+                const targetLogs = logs.filter(l => l.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date));
                 if (targetLogs.length === 0) return;
 
-                const labels = targetLogs.map(l => l.date.slice(5)); 
+                const logsByDate = {};
+                targetLogs.forEach(l => {
+                    const d = l.date;
+                    if (!logsByDate[d]) logsByDate[d] = [];
+                    logsByDate[d].push(l);
+                });
+
+                const labels = Object.keys(logsByDate).sort();
                 let data = [], label = '', borderColor = '#3b82f6';
 
                 const firstLog = targetLogs[0];
                 if (firstLog.type === 'strength' || firstLog.type === 'interval') {
-                    data = targetLogs.map(l => l.weight || 0);
-                    label = '重量 (kg)';
+                    label = '最大重量 (kg)';
+                    data = labels.map(d => Math.max(...logsByDate[d].map(l => l.weight || 0)));
                     if (firstLog.type === 'interval') borderColor = '#9333ea';
-                } else if (firstLog.type === 'cardio') {
-                    data = targetLogs.map(l => l.duration || 0);
-                    label = '時間 (min)';
+                } else {
+                    label = '總時間 (min)';
+                    data = labels.map(d => logsByDate[d].reduce((sum, l) => sum + (l.duration || 0), 0));
                     borderColor = '#f97316';
                 }
 
                 if (chartInstance.current) chartInstance.current.destroy();
-
                 const ctx = chartRef.current.getContext('2d');
                 chartInstance.current = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: labels,
-                        datasets: [{
-                            label: label,
-                            data: data,
-                            borderColor: borderColor,
-                            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                            borderWidth: 3,
-                            pointBackgroundColor: isDarkMode ? '#fff' : '#fff',
-                            pointBorderColor: borderColor,
-                            pointRadius: 5,
-                            tension: 0.3,
-                            fill: true
-                        }]
+                        labels: labels.map(d => d.slice(5)),
+                        datasets: [{ label, data, borderColor, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderWidth: 3, pointBackgroundColor: isDarkMode ? '#fff' : '#fff', pointBorderColor: borderColor, pointRadius: 5, tension: 0.3, fill: true }]
                     },
                     options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { labels: { color: isDarkMode ? '#cbd5e1' : '#475569' } },
-                            tooltip: {
-                                mode: 'index', intersect: false,
-                                backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-                                titleColor: isDarkMode ? '#fff' : '#000',
-                                bodyColor: isDarkMode ? '#fff' : '#000',
-                                borderColor: borderColor, borderWidth: 1
-                            }
-                        },
-                        scales: {
-                            x: { grid: { display: false }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b' } },
-                            y: { grid: { color: isDarkMode ? '#334155' : '#e2e8f0' }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b' }, beginAtZero: true }
-                        }
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { labels: { color: isDarkMode ? '#cbd5e1' : '#475569' } } },
+                        scales: { x: { grid: { display: false }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b' } }, y: { grid: { color: isDarkMode ? '#334155' : '#e2e8f0' }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b' }, beginAtZero: true } }
                     }
                 });
-
                 return () => { if (chartInstance.current) chartInstance.current.destroy(); };
             }, [selectedExercise, logs, isDarkMode]);
-
-            const progress = useMemo(() => {
-                if (!selectedExercise) return null;
-                const targetLogs = logs.filter(l => l.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date));
-                if (targetLogs.length < 2) return null;
-                const first = targetLogs[0];
-                const last = targetLogs[targetLogs.length - 1];
-                let val1 = 0, val2 = 0, unit = '';
-                if (first.type === 'strength' || first.type === 'interval') { val1 = first.weight || 0; val2 = last.weight || 0; unit = 'kg'; } 
-                else { val1 = first.duration || 0; val2 = last.duration || 0; unit = 'min'; }
-                return { diff: val2 - val1, unit };
-            }, [selectedExercise, logs]);
 
             return (
                 <div className="space-y-4 animate-in fade-in duration-300">
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
                         <label className="text-sm text-slate-500 dark:text-slate-400 mb-2 block font-bold">選擇分析動作</label>
-                        <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-slate-700">
-                            {exercises.map((ex, idx) => <option key={idx} value={ex}>{ex}</option>)}
-                        </select>
+                        <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-slate-700">{exercises.map((ex, idx) => <option key={idx} value={ex}>{ex}</option>)}</select>
                     </div>
                     {selectedExercise && <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 h-80 relative"><canvas ref={chartRef}></canvas></div>}
-                    {progress && <div className={`p-4 rounded-2xl flex items-center justify-between ${progress.diff >= 0 ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}><span className="font-bold">總進步幅度</span><span className="font-bold text-lg">{progress.diff > 0 ? '+' : ''}{progress.diff} {progress.unit}</span></div>}
                     {exercises.length === 0 && <div className="text-center py-20 text-slate-400">尚無數據可分析</div>}
                 </div>
             );
@@ -237,35 +205,80 @@
             );
         };
 
+        const LogGroup = ({ logs, onDelete }) => {
+            const grouped = useMemo(() => {
+                const groups = new Map();
+                // 先照 ID(時間戳) 由舊到新排序，確保動作出現的順序是完全依照建立的先後順序
+                const sortedLogs = [...logs].sort((a, b) => a.id - b.id);
+                sortedLogs.forEach(log => {
+                    const key = `${log.exercise}-${log.type}`;
+                    if (!groups.has(key)) groups.set(key, { ...log, sets: [] });
+                    groups.get(key).sets.push(log);
+                });
+                return Array.from(groups.values());
+            }, [logs]);
+
+            return (
+                <div className="space-y-4">
+                    {grouped.map((group, idx) => (
+                        <div key={idx} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                            <div className="p-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    {/* 順序數字 Badge */}
+                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs shrink-0">
+                                        {idx + 1}
+                                    </span>
+                                    
+                                    <div className={`p-2 rounded-lg shrink-0 ${group.type === 'interval' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : group.type === 'cardio' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
+                                        {group.type === 'interval' ? <Icons.Timer className="w-4 h-4"/> : group.type === 'cardio' ? <Icons.Flame className="w-4 h-4"/> : <Icons.Dumbbell className="w-4 h-4"/>}
+                                    </div>
+                                    <span className="font-bold text-slate-800 dark:text-white truncate">{group.exercise}</span>
+                                    {group.bodyPart && <span className="text-xs px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 shrink-0">{BODY_PART_LABELS[group.bodyPart] || group.bodyPart}</span>}
+                                </div>
+                            </div>
+                            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                                {group.sets.map((set, sIdx) => (
+                                    <div key={set.id} className="p-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-slate-400 font-mono w-6 text-center">{sIdx + 1}</span>
+                                            <div className="text-slate-700 dark:text-slate-300 font-bold">
+                                                {set.type === 'strength' && <>{set.weight}kg <span className="text-slate-400 font-normal mx-1">×</span> {set.reps}下</>}
+                                                {set.type === 'cardio' && <>{set.duration}分 <span className="text-slate-400 font-normal mx-1">/</span> {set.distance}km</>}
+                                                {set.type === 'interval' && <>{set.weight ? set.weight+'kg | ' : ''}{set.workTime}s/{set.restTime}s</>}
+                                            </div>
+                                        </div>
+                                        <button onClick={() => onDelete(set.id)} className="text-slate-300 hover:text-red-500 p-2"><Icons.Trash2 className="w-4 h-4"/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+
         function FitnessApp() {
             const [logs, setLogs] = useState([]);
             const [activeTab, setActiveTab] = useState('record'); 
             const [date, setDate] = useState(formatDate(new Date()));
+            
             const [workoutType, setWorkoutType] = useState('strength');
             const [bodyPart, setBodyPart] = useState('chest');
             const [exercise, setExercise] = useState('');
-            const [weight, setWeight] = useState('');
-            const [reps, setReps] = useState('');
-            const [sets, setSets] = useState('');
-            const [duration, setDuration] = useState('');
-            const [distance, setDistance] = useState('');
-            const [workTime, setWorkTime] = useState('');
-            const [restTime, setRestTime] = useState('');
-            const [lastLog, setLastLog] = useState(null);
-            const [showSuccess, setShowSuccess] = useState(false);
-            const [importMsg, setImportMsg] = useState('');
+            const [isSessionActive, setIsSessionActive] = useState(false);
+            const [currentSets, setCurrentSets] = useState([]); 
+
             const [historyDate, setHistoryDate] = useState(formatDate(new Date()));
             const [darkMode, setDarkMode] = useState(false);
             const [deleteTargetId, setDeleteTargetId] = useState(null);
             const [isClearingAll, setIsClearingAll] = useState(false);
-            
+            const [showSuccess, setShowSuccess] = useState(false);
+            const [importMsg, setImportMsg] = useState('');
             const fileInputRef = useRef(null);
 
             useEffect(() => {
                 const savedLogs = localStorage.getItem('fitnessLogs');
-                if (savedLogs) {
-                    try { setLogs(JSON.parse(savedLogs).map(log => ({ ...log, type: log.type || 'strength' }))); } catch (e) { console.error(e); }
-                }
+                if (savedLogs) { try { setLogs(JSON.parse(savedLogs)); } catch (e) { console.error(e); } }
                 const isDark = localStorage.getItem('fitnessDarkMode') === 'true';
                 setDarkMode(isDark);
                 if (isDark) { document.documentElement.classList.add('dark'); updateMetaThemeColor('#0f172a'); } 
@@ -286,65 +299,85 @@
                 else { document.documentElement.classList.remove('dark'); updateMetaThemeColor('#2563eb'); }
             };
 
-            const oneRM = useMemo(() => {
-                const w = parseFloat(weight), r = parseInt(reps);
-                if (!w || !r || r === 0) return null;
-                return Math.round(w * (1 + r / 30));
-            }, [weight, reps]);
-
             const availableExercises = useMemo(() => {
                 const historyExercises = logs.filter(log => log.bodyPart === bodyPart).map(log => log.exercise);
                 return [...new Set(historyExercises)].sort();
             }, [bodyPart, logs]);
 
-            useEffect(() => {
-                if (!exercise.trim()) { setLastLog(null); return; }
-                const history = logs.filter(log => log.exercise.trim() === exercise.trim()).sort((a, b) => new Date(b.date) - new Date(a.date));
-                if (history.length > 0) {
-                    const foundLog = history[0];
-                    setLastLog(foundLog);
-                    setWorkoutType(foundLog.type);
-                    if (foundLog.bodyPart && foundLog.type === 'strength') setBodyPart(foundLog.bodyPart);
-                } else { setLastLog(null); }
-            }, [exercise, logs]);
-
-            const handleAddLog = (e) => {
-                e.preventDefault();
-                if (!exercise) return;
-                const newLog = {
-                    id: Date.now(), date, exercise: exercise.trim(), type: workoutType,
-                    bodyPart: workoutType === 'strength' ? bodyPart : null,
-                    weight: (workoutType === 'strength' || workoutType === 'interval') ? parseFloat(weight) : null,
-                    reps: workoutType === 'strength' ? parseInt(reps) : null,
-                    sets: (workoutType === 'strength' || workoutType === 'interval') ? parseInt(sets) : null,
-                    duration: workoutType === 'cardio' ? parseFloat(duration) : null,
-                    distance: (workoutType === 'cardio' && distance) ? parseFloat(distance) : null,
-                    workTime: workoutType === 'interval' ? parseInt(workTime) : null,
-                    restTime: workoutType === 'interval' ? parseInt(restTime) : null,
+            const startSession = () => {
+                if(!exercise.trim()) return;
+                setIsSessionActive(true);
+                const history = logs.filter(l => l.exercise === exercise).sort((a,b) => new Date(b.date) - new Date(a.date));
+                const last = history[0];
+                const initialSet = {
+                    id: Date.now(),
+                    weight: last ? last.weight : '', reps: last ? last.reps : '',
+                    duration: last ? last.duration : '', distance: last ? last.distance : '',
+                    workTime: last ? last.workTime : '', restTime: last ? last.restTime : '',
+                    completed: false
                 };
-                const updatedLogs = [newLog, ...logs];
-                saveLogs(updatedLogs);
-                setExercise(''); setWeight(''); setReps(''); setSets(''); setDuration(''); setDistance(''); setWorkTime(''); setRestTime(''); setLastLog(null);
-                showToast();
+                setCurrentSets([initialSet]);
             };
 
+            const addNewSetRow = () => {
+                const prevSet = currentSets[currentSets.length - 1];
+                setCurrentSets([...currentSets, {
+                    id: Date.now(),
+                    weight: prevSet ? prevSet.weight : '', reps: prevSet ? prevSet.reps : '',
+                    duration: prevSet ? prevSet.duration : '', distance: prevSet ? prevSet.distance : '',
+                    workTime: prevSet ? prevSet.workTime : '', restTime: prevSet ? prevSet.restTime : '',
+                    completed: false
+                }]);
+            };
+
+            const updateSet = (index, field, value) => {
+                const newSets = [...currentSets];
+                newSets[index][field] = value;
+                setCurrentSets(newSets);
+            };
+
+            const toggleSetCompletion = (index) => {
+                const set = currentSets[index];
+                if (set.completed) return;
+                if (workoutType === 'strength' && (!set.weight && !set.reps)) return;
+                
+                const newLog = {
+                    id: set.id, date, exercise: exercise.trim(), type: workoutType,
+                    bodyPart: workoutType === 'strength' ? bodyPart : null,
+                    weight: (workoutType === 'strength' || workoutType === 'interval') ? parseFloat(set.weight || 0) : null,
+                    reps: workoutType === 'strength' ? parseInt(set.reps || 0) : null,
+                    sets: 1,
+                    duration: workoutType === 'cardio' ? parseFloat(set.duration || 0) : null,
+                    distance: (workoutType === 'cardio' && set.distance) ? parseFloat(set.distance) : null,
+                    workTime: workoutType === 'interval' ? parseInt(set.workTime || 0) : null,
+                    restTime: workoutType === 'interval' ? parseInt(set.restTime || 0) : null,
+                };
+
+                const updatedLogs = [newLog, ...logs];
+                setLogs(updatedLogs); localStorage.setItem('fitnessLogs', JSON.stringify(updatedLogs));
+                const newSets = [...currentSets]; newSets[index].completed = true; setCurrentSets(newSets);
+                setShowSuccess(true); setTimeout(() => setShowSuccess(false), 1500);
+            };
+
+            const deleteSetRow = (index) => {
+                const set = currentSets[index];
+                if (set.completed) {
+                    const updatedLogs = logs.filter(l => l.id !== set.id);
+                    setLogs(updatedLogs); localStorage.setItem('fitnessLogs', JSON.stringify(updatedLogs));
+                }
+                setCurrentSets(currentSets.filter((_, i) => i !== index));
+            };
+
+            const endSession = () => { setIsSessionActive(false); setExercise(''); setCurrentSets([]); };
             const initiateDelete = (id) => { setDeleteTargetId(id); setIsClearingAll(false); };
             const initiateClearAll = () => { setDeleteTargetId('ALL'); setIsClearingAll(true); };
             const confirmDelete = () => {
-                if (isClearingAll) { saveLogs([]); } 
-                else if (deleteTargetId) { saveLogs(logs.filter(log => log.id !== deleteTargetId)); }
+                if (isClearingAll) { setLogs([]); localStorage.setItem('fitnessLogs', JSON.stringify([])); } 
+                else if (deleteTargetId) { const updated = logs.filter(log => log.id !== deleteTargetId); setLogs(updated); localStorage.setItem('fitnessLogs', JSON.stringify(updated)); }
                 setDeleteTargetId(null); setIsClearingAll(false);
             };
             const cancelDelete = () => { setDeleteTargetId(null); setIsClearingAll(false); };
-            const saveLogs = (newLogs) => { setLogs(newLogs); localStorage.setItem('fitnessLogs', JSON.stringify(newLogs)); };
-            const fillFromLast = () => {
-                if (!lastLog) return;
-                setWorkoutType(lastLog.type); 
-                if (lastLog.type === 'strength') { setWeight(lastLog.weight); setReps(lastLog.reps); setSets(lastLog.sets); if(lastLog.bodyPart) setBodyPart(lastLog.bodyPart); } 
-                else if (lastLog.type === 'cardio') { setDuration(lastLog.duration); setDistance(lastLog.distance || ''); } 
-                else if (lastLog.type === 'interval') { setWeight(lastLog.weight); setWorkTime(lastLog.workTime); setRestTime(lastLog.restTime); setSets(lastLog.sets); }
-            };
-            const showToast = () => { setShowSuccess(true); setTimeout(() => setShowSuccess(false), 2000); };
+            
             const handleExport = () => {
                 const blob = new Blob([JSON.stringify(logs, null, 2)], { type: "application/json" });
                 const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `fitness_backup_${formatDate(new Date())}.json`;
@@ -364,201 +397,132 @@
                             if (newUniqueLogs.length === 0) { setImportMsg('資料已存在'); } 
                             else {
                                 const mergedLogs = [...logs, ...newUniqueLogs].sort((a, b) => new Date(b.date) - new Date(a.date));
-                                saveLogs(mergedLogs);
+                                setLogs(mergedLogs); localStorage.setItem('fitnessLogs', JSON.stringify(mergedLogs));
                                 setImportMsg(`成功匯入 ${newUniqueLogs.length} 筆`);
                             }
                         } else { setImportMsg('格式錯誤'); }
                     } catch (err) { setImportMsg('檔案讀取失敗'); }
-                    event.target.value = '';
-                    setTimeout(() => setImportMsg(''), 3000);
+                    event.target.value = ''; setTimeout(() => setImportMsg(''), 3000);
                 };
                 reader.readAsText(file);
             };
             const getLogsByDate = (targetDate) => logs.filter(log => log.date === targetDate);
-            const calculateStats = (dayLogs) => {
-                const volume = dayLogs.filter(l => l.type === 'strength').reduce((acc, curr) => acc + (curr.weight * curr.reps * curr.sets), 0);
-                const cardioMins = dayLogs.filter(l => l.type === 'cardio').reduce((acc, curr) => acc + curr.duration, 0);
-                return { volume, cardioMins };
-            };
-            const BODY_PART_LABELS = { 'chest': '胸', 'back': '背', 'legs': '腿', 'shoulders': '肩', 'other': '其他' };
 
             return (
                 <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans flex flex-col w-full transition-colors duration-300">
                     <header className="bg-gradient-brand text-white p-4 shadow-lg sticky top-0 z-20 transition-all duration-300">
                         <div className="flex items-center justify-between max-w-md mx-auto">
                             <div className="flex items-center gap-2"><Icons.Activity className="w-6 h-6" /><h1 className="text-xl font-bold tracking-wide">
-                                {activeTab === 'record' && '訓練紀錄'}
+                                {activeTab === 'record' && (isSessionActive ? exercise : '訓練紀錄')}
                                 {activeTab === 'history' && '歷史回顧'}
                                 {activeTab === 'analysis' && '數據分析'}
                                 {activeTab === 'settings' && '資料設定'}
                             </h1></div>
-                            <button onClick={toggleDarkMode} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all active:scale-95">{darkMode ? <Icons.Sun className="w-5 h-5" /> : <Icons.Moon className="w-5 h-5" />}</button>
+                            {!isSessionActive && <button onClick={toggleDarkMode} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all active:scale-95">{darkMode ? <Icons.Sun className="w-5 h-5" /> : <Icons.Moon className="w-5 h-5" />}</button>}
+                            {isSessionActive && <button onClick={endSession} className="text-sm font-bold bg-white/20 px-3 py-1.5 rounded-lg hover:bg-white/30">結束動作</button>}
                         </div>
                     </header>
 
                     <main className="flex-1 max-w-md mx-auto w-full p-4 pb-24 overflow-y-auto">
                         {activeTab === 'record' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
-                                <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm p-5 border border-slate-100 dark:border-slate-700 transition-colors">
-                                    <form onSubmit={handleAddLog} className="space-y-5">
-                                        <div className="relative group">
-                                            <div className="absolute left-3 top-3.5 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors"><Icons.Calendar className="w-full h-full" /></div>
+                                {!isSessionActive ? (
+                                    <>
+                                    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm p-5 border border-slate-100 dark:border-slate-700 transition-colors">
+                                        <div className="relative group mb-5">
+                                            <div className="absolute left-3 top-3.5 w-5 h-5 text-slate-400"><Icons.Calendar className="w-full h-full" /></div>
                                             <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" />
                                         </div>
-                                        <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-2xl">
+                                        <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-2xl mb-5">
                                             <button type="button" onClick={() => setWorkoutType('strength')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'strength' ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Dumbbell className="w-4 h-4 mr-1" /> 重訓</button>
                                             <button type="button" onClick={() => setWorkoutType('interval')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'interval' ? 'bg-white dark:bg-slate-600 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Timer className="w-4 h-4 mr-1" /> 計時</button>
                                             <button type="button" onClick={() => setWorkoutType('cardio')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'cardio' ? 'bg-white dark:bg-slate-600 text-orange-500 dark:text-orange-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Flame className="w-4 h-4 mr-1" /> 有氧</button>
                                         </div>
                                         {workoutType === 'strength' && (
-                                            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-4">
                                                 {Object.keys(BODY_PART_LABELS).map(key => (
                                                     <button key={key} type="button" onClick={() => setBodyPart(key)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${bodyPart === key ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none' : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-600'}`}>{BODY_PART_LABELS[key]}</button>
                                                 ))}
                                             </div>
                                         )}
-                                        <div className="relative group">
-                                            <input type="text" list="exercise-list" placeholder={workoutType === 'interval' ? "動作 (如：壺鈴擺盪)" : (workoutType === 'strength' ? `動作名稱 (可輸入新動作)` : "動作名稱 (如：跑步機)")} required value={exercise} onChange={(e) => setExercise(e.target.value)} className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400 transition-all" />
+                                        <div className="relative group mb-4">
+                                            <input type="text" list="exercise-list" placeholder="輸入動作名稱 (如: 深蹲)..." 
+                                                value={exercise} onChange={(e) => setExercise(e.target.value)}
+                                                className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400 transition-all font-bold text-center text-lg" 
+                                            />
                                             {workoutType === 'strength' && <datalist id="exercise-list">{availableExercises.map((ex, idx) => <option key={idx} value={ex} />)}</datalist>}
                                         </div>
-                                        
-                                        {lastLog && (
-                                            <div className={`border rounded-2xl p-4 flex justify-between items-center transition-colors ${lastLog.type === 'interval' ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-100 dark:border-purple-800' : (lastLog.type === 'cardio' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800' : 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-800')}`}>
-                                                <div>
-                                                    <div className={`text-xs font-bold mb-1.5 flex items-center uppercase tracking-wide ${lastLog.type === 'interval' ? 'text-purple-600 dark:text-purple-400' : (lastLog.type === 'cardio' ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400')}`}><Icons.History className="w-3 h-3 mr-1" /> 上次 ({lastLog.date})</div>
-                                                    <div className="text-slate-700 dark:text-slate-200 font-bold text-base">
-                                                        {lastLog.type === 'strength' && <span>{lastLog.weight}kg × {lastLog.reps} × {lastLog.sets}</span>}
-                                                        {lastLog.type === 'cardio' && <span>{lastLog.duration} 分鐘 {lastLog.distance ? `(${lastLog.distance}km)` : ''}</span>}
-                                                        {lastLog.type === 'interval' && <span>{lastLog.weight}kg | {lastLog.workTime}動/{lastLog.restTime}休 | {lastLog.sets}組</span>}
-                                                    </div>
-                                                </div>
-                                                <button type="button" onClick={fillFromLast} className={`text-white text-xs px-3 py-2.5 rounded-xl flex items-center shadow-lg active:scale-95 transition-all ${lastLog.type === 'interval' ? 'bg-purple-500 shadow-purple-200 dark:shadow-none' : (lastLog.type === 'cardio' ? 'bg-orange-500 shadow-orange-200 dark:shadow-none' : 'bg-blue-600 shadow-blue-200 dark:shadow-none')}`}>帶入 <Icons.ArrowUpRight className="w-3 h-3 ml-1" /></button>
-                                            </div>
-                                        )}
-
-                                        {workoutType === 'strength' && (
-                                            <div>
-                                                <div className="grid grid-cols-3 gap-3 mb-2">
-                                                    <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">重量 (kg)</label><input type="number" placeholder="0" required step="0.5" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full px-2 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" /></div>
-                                                    <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">次數</label><input type="number" placeholder="0" required value={reps} onChange={(e) => setReps(e.target.value)} className="w-full px-2 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" /></div>
-                                                    <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">組數</label><input type="number" placeholder="0" required value={sets} onChange={(e) => setSets(e.target.value)} className="w-full px-2 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-center text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" /></div>
-                                                </div>
-                                                {oneRM && <div className="text-center text-xs text-slate-400 dark:text-slate-500 font-medium">預估極限 (1RM): <span className="text-blue-600 dark:text-blue-400 font-bold text-sm">{oneRM} kg</span></div>}
-                                            </div>
-                                        )}
-
-                                        {workoutType === 'interval' && (
-                                            <div className="space-y-3">
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">重量 (kg)</label><input type="number" placeholder="0" step="0.5" value={weight} onChange={(e) => setWeight(e.target.value)} className="w-full px-3 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" /></div>
-                                                    <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">組數</label><input type="number" placeholder="0" required value={sets} onChange={(e) => setSets(e.target.value)} className="w-full px-3 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" /></div>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">做 (秒)</label><div className="relative"><div className="absolute left-3 top-4 w-4 h-4 text-slate-400"><Icons.Activity className="w-full h-full" /></div><input type="number" placeholder="30" required value={workTime} onChange={(e) => setWorkTime(e.target.value)} className="w-full pl-9 pr-3 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" /></div></div>
-                                                    <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">休 (秒)</label><div className="relative"><div className="absolute left-3 top-4 w-4 h-4 text-slate-400"><Icons.Timer className="w-full h-full" /></div><input type="number" placeholder="90" required value={restTime} onChange={(e) => setRestTime(e.target.value)} className="w-full pl-9 pr-3 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all" /></div></div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {workoutType === 'cardio' && (
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">時間 (分鐘)</label><div className="relative"><div className="absolute left-3 top-4 w-4 h-4 text-slate-400"><Icons.Timer className="w-full h-full" /></div><input type="number" placeholder="0" required value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full pl-9 pr-3 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all" /></div></div>
-                                                <div className="space-y-1"><label className="text-xs text-slate-500 dark:text-slate-400 ml-1 font-bold">距離 (km)</label><div className="relative"><div className="absolute left-3 top-4 w-4 h-4 text-slate-400"><Icons.Footprints className="w-full h-full" /></div><input type="number" step="0.1" placeholder="0" value={distance} onChange={(e) => setDistance(e.target.value)} className="w-full pl-9 pr-3 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl text-lg font-bold focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all" /></div></div>
-                                            </div>
-                                        )}
-
-                                        <button type="submit" className={`w-full text-white font-bold py-4 rounded-2xl shadow-lg active:scale-[0.98] transition-all flex justify-center items-center ${workoutType === 'interval' ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-200 dark:shadow-none' : (workoutType === 'cardio' ? 'bg-orange-500 hover:bg-orange-600 shadow-orange-200 dark:shadow-none' : 'bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 shadow-slate-200 dark:shadow-none')}`}><Icons.Save className="w-5 h-5 mr-2" /> 儲存紀錄</button>
-                                    </form>
-                                </div>
-                                <div className="space-y-3">
-                                    <h3 className="text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">今日紀錄</h3>
-                                    {getLogsByDate(date).length === 0 ? <p className="text-center text-slate-400 text-sm py-4">今天還沒有紀錄</p> : getLogsByDate(date).map(log => (
-                                        <div key={log.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 flex justify-between items-center shadow-sm">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2.5 rounded-xl ${log.type === 'interval' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : (log.type === 'cardio' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400')}`}>
-                                                    {log.type === 'interval' ? <Icons.Timer className="w-5 h-5"/> : (log.type === 'cardio' ? <Icons.Flame className="w-5 h-5"/> : <Icons.Dumbbell className="w-5 h-5"/>)}
-                                                </div>
-                                                <div>
-                                                    <div className="font-bold text-slate-800 dark:text-slate-100">
-                                                        {log.bodyPart && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-1.5 py-0.5 rounded mr-2 align-middle border border-slate-200 dark:border-slate-600">{BODY_PART_LABELS[log.bodyPart] || log.bodyPart}</span>}
-                                                        {log.exercise}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
-                                                        {log.type === 'strength' && `${log.weight}kg × ${log.reps} × ${log.sets}`}
-                                                        {log.type === 'cardio' && `${log.duration} mins ${log.distance ? `(${log.distance}km)` : ''}`}
-                                                        {log.type === 'interval' && `${log.weight ? log.weight+'kg | ' : ''}做${log.workTime}s / 休${log.restTime}s × ${log.sets}`}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <button onClick={() => initiateDelete(log.id)} className="text-slate-300 hover:text-red-500 p-2"><Icons.Trash2 className="w-5 h-5"/></button>
+                                        <button 
+                                            onClick={startSession} 
+                                            disabled={!exercise.trim()}
+                                            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center text-lg"
+                                        >
+                                            <Icons.Play className="w-5 h-5 mr-2 fill-current" /> 開始訓練
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="space-y-3">
+                                        <h3 className="text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">今日已完成</h3>
+                                        {getLogsByDate(date).length === 0 ? <p className="text-center text-slate-400 text-sm py-4">今天還沒有紀錄</p> : 
+                                            <LogGroup logs={getLogsByDate(date)} onDelete={initiateDelete} />
+                                        }
+                                    </div>
+                                    </>
+                                ) : (
+                                    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+                                        <div className="p-4 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 flex justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                            <div className="w-10 text-center">組數</div>
+                                            <div className="flex-1 text-center">{workoutType === 'strength' ? 'kg' : (workoutType === 'cardio' ? '分' : 'kg')}</div>
+                                            <div className="flex-1 text-center">{workoutType === 'strength' ? '下' : (workoutType === 'cardio' ? 'km' : '秒/秒')}</div>
+                                            <div className="w-10 text-center">狀態</div>
                                         </div>
-                                    ))}
-                                </div>
+                                        
+                                        <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                                            {currentSets.map((set, idx) => (
+                                                <div key={set.id} className={`p-3 flex items-center justify-between transition-all ${set.completed ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
+                                                    <div className="w-10 text-center font-mono font-bold text-slate-400">{idx + 1}</div>
+                                                    <div className="flex-1 px-1">
+                                                        <input type="number" value={workoutType === 'cardio' ? set.duration : set.weight} onChange={(e) => updateSet(idx, workoutType === 'cardio' ? 'duration' : 'weight', e.target.value)} placeholder="-" disabled={set.completed} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-transparent" />
+                                                    </div>
+                                                    <div className="flex-1 px-1">
+                                                        {workoutType === 'interval' ? (
+                                                            <div className="flex gap-1">
+                                                                <input type="number" value={set.workTime} onChange={(e) => updateSet(idx, 'workTime', e.target.value)} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold text-xs" placeholder="做" disabled={set.completed} />
+                                                                <input type="number" value={set.restTime} onChange={(e) => updateSet(idx, 'restTime', e.target.value)} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold text-xs" placeholder="休" disabled={set.completed} />
+                                                            </div>
+                                                        ) : (
+                                                            <input type="number" value={workoutType === 'cardio' ? set.distance : set.reps} onChange={(e) => updateSet(idx, workoutType === 'cardio' ? 'distance' : 'reps', e.target.value)} placeholder="-" disabled={set.completed} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-transparent" />
+                                                        )}
+                                                    </div>
+                                                    <div className="w-10 flex justify-center">
+                                                        <button onClick={() => set.completed ? deleteSetRow(idx) : toggleSetCompletion(idx)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${set.completed ? 'bg-green-500 text-white shadow-green-200' : 'bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-400'}`}>
+                                                            {set.completed ? <Icons.Check className="w-5 h-5" /> : <div className="w-3 h-3 rounded-sm bg-current opacity-50 shrink-0"></div>}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button onClick={addNewSetRow} className="w-full py-4 bg-slate-50 dark:bg-slate-700/30 text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"><Icons.Plus className="w-4 h-4 mr-2" /> 新增一組</button>
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {activeTab === 'history' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
                                 <CalendarView logs={logs} selectedDate={historyDate} onSelectDate={setHistoryDate} />
-                                <div>
-                                    {getLogsByDate(historyDate).length > 0 ? (
-                                        <div className="space-y-4">
-                                            <div className="flex gap-2 px-1 flex-wrap">
-                                                <div className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center"><Icons.Dumbbell className="w-3 h-3 mr-1" /> 重訓總量: {calculateStats(getLogsByDate(historyDate)).volume} kg</div>
-                                                {calculateStats(getLogsByDate(historyDate)).cardioMins > 0 && <div className="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center"><Icons.Timer className="w-3 h-3 mr-1" /> 有氧: {calculateStats(getLogsByDate(historyDate)).cardioMins} 分鐘</div>}
-                                            </div>
-                                            {getLogsByDate(historyDate).map((log) => (
-                                                <div key={log.id} className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-3">
-                                                            <span className={`text-xs px-2 py-0.5 rounded font-bold ${log.type === 'interval' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : (log.type === 'cardio' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400')}`}>
-                                                                {log.type === 'interval' ? '計時' : (log.type === 'cardio' ? '有氧' : '重訓')}
-                                                            </span>
-                                                            {log.bodyPart && <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded ml-1 border border-slate-200 dark:border-slate-600 font-medium">{BODY_PART_LABELS[log.bodyPart] || log.bodyPart}</span>}
-                                                            <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100 ml-2">{log.exercise}</h3>
-                                                        </div>
-                                                        {log.type === 'strength' && (
-                                                            <div className="flex items-center space-x-3">
-                                                                <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-700 p-2 rounded-xl min-w-[64px]"><span className="text-[10px] text-slate-400 font-bold">KG</span><span className="font-bold text-slate-700 dark:text-slate-200">{log.weight}</span></div>
-                                                                <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-700 p-2 rounded-xl min-w-[64px]"><span className="text-[10px] text-slate-400 font-bold">REPS</span><span className="font-bold text-slate-700 dark:text-slate-200">{log.reps}</span></div>
-                                                                <div className="flex flex-col items-center bg-slate-50 dark:bg-slate-700 p-2 rounded-xl min-w-[64px]"><span className="text-[10px] text-slate-400 font-bold">SETS</span><span className="font-bold text-slate-700 dark:text-slate-200">{log.sets}</span></div>
-                                                            </div>
-                                                        )}
-                                                        {log.type === 'interval' && (
-                                                            <div className="flex items-center space-x-3">
-                                                                <div className="flex flex-col items-center bg-purple-50 dark:bg-purple-900/20 p-2 rounded-xl min-w-[64px]"><span className="text-[10px] text-purple-400 font-bold">KG</span><span className="font-bold text-slate-700 dark:text-slate-200">{log.weight || '-'}</span></div>
-                                                                <div className="flex flex-col items-center bg-purple-50 dark:bg-purple-900/20 p-2 rounded-xl min-w-[64px]"><span className="text-[10px] text-purple-400 font-bold">做/休</span><span className="font-bold text-slate-700 dark:text-slate-200">{log.workTime}/{log.restTime}</span></div>
-                                                                <div className="flex flex-col items-center bg-purple-50 dark:bg-purple-900/20 p-2 rounded-xl min-w-[64px]"><span className="text-[10px] text-purple-400 font-bold">SETS</span><span className="font-bold text-slate-700 dark:text-slate-200">{log.sets}</span></div>
-                                                            </div>
-                                                        )}
-                                                        {log.type === 'cardio' && (
-                                                            <div className="flex items-center space-x-3">
-                                                                <div className="flex flex-col items-center bg-orange-50 dark:bg-orange-900/20 p-2 rounded-xl min-w-[80px]"><span className="text-[10px] text-orange-400 font-bold">MINS</span><span className="font-bold text-slate-700 dark:text-slate-200 text-lg">{log.duration}</span></div>
-                                                                {log.distance && <div className="flex flex-col items-center bg-orange-50 dark:bg-orange-900/20 p-2 rounded-xl min-w-[80px]"><span className="text-[10px] text-orange-400 font-bold">KM</span><span className="font-bold text-slate-700 dark:text-slate-200 text-lg">{log.distance}</span></div>}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <button onClick={() => initiateDelete(log.id)} className="ml-4 text-slate-300 hover:text-red-500 p-2"><Icons.Trash2 className="w-5 h-5" /></button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-20"><div className="bg-slate-100 dark:bg-slate-800 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.Activity className="w-10 h-10 text-slate-300 dark:text-slate-600" /></div><p className="text-slate-500 dark:text-slate-500 font-medium">本日無紀錄</p></div>
-                                    )}
+                                <div className="space-y-3">
+                                    {getLogsByDate(historyDate).length === 0 ? <p className="text-center text-slate-400 text-sm py-4">本日無紀錄</p> : <LogGroup logs={getLogsByDate(historyDate)} onDelete={initiateDelete} />}
                                 </div>
                             </div>
                         )}
 
-                        {activeTab === 'analysis' && (
-                            <ChartView logs={logs} isDarkMode={darkMode} />
-                        )}
+                        {activeTab === 'analysis' && <ChartView logs={logs} isDarkMode={darkMode} />}
 
                         {activeTab === 'settings' && (
                             <div className="space-y-6 animate-in fade-in duration-300">
                                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-                                    <div className="p-5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
-                                        <h2 className="font-bold text-slate-800 dark:text-white flex items-center"><Icons.Settings className="w-5 h-5 mr-2 text-slate-500" /> 資料管理</h2>
-                                    </div>
+                                    <div className="p-5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700"><h2 className="font-bold text-slate-800 dark:text-white flex items-center"><Icons.Settings className="w-5 h-5 mr-2 text-slate-500" /> 資料管理</h2></div>
                                     <div className="p-5 space-y-6">
                                         <div><h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">備份資料 (匯出)</h3><button onClick={handleExport} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center transition-colors shadow-lg shadow-emerald-200 dark:shadow-none"><Icons.Download className="w-5 h-5 mr-2" /> 下載備份檔</button></div>
                                         <div className="border-t border-slate-100 dark:border-slate-700"></div>
@@ -569,17 +533,17 @@
                                     <div className="p-5 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-900/30"><h2 className="font-bold text-red-800 dark:text-red-400 flex items-center"><Icons.AlertCircle className="w-5 h-5 mr-2" /> 危險區域</h2></div>
                                     <div className="p-5"><button onClick={initiateClearAll} className="w-full border-2 border-red-100 dark:border-red-900 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold py-3.5 rounded-2xl flex items-center justify-center transition-colors">清空所有資料</button></div>
                                 </div>
-                                <div className="text-center text-xs text-slate-400 mt-8">Fitness Tracker V14.1 (Fixed Icons)</div>
+                                <div className="text-center text-xs text-slate-400 mt-8">Fitness Tracker V15.4 (Layout Fixed)</div>
                             </div>
                         )}
                     </main>
 
                     <nav className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 fixed bottom-0 left-0 right-0 z-30 pb-safe transition-colors">
                         <div className="max-w-md mx-auto flex justify-between p-2 w-full">
-                            <button onClick={() => setActiveTab('record')} className={`flex flex-col items-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'record' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Plus className="w-6 h-6 mb-1" /><span className="text-xs font-bold">新增</span></button>
-                            <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'history' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.CalendarDays className="w-6 h-6 mb-1" /><span className="text-xs font-bold">歷史</span></button>
-                            <button onClick={() => setActiveTab('analysis')} className={`flex flex-col items-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'analysis' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Chart className="w-6 h-6 mb-1" /><span className="text-xs font-bold">分析</span></button>
-                            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'settings' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Settings className="w-6 h-6 mb-1" /><span className="text-xs font-bold">設定</span></button>
+                            <button onClick={() => setActiveTab('record')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'record' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Plus className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">新增</span></button>
+                            <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'history' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.CalendarDays className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">歷史</span></button>
+                            <button onClick={() => setActiveTab('analysis')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'analysis' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Chart className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">分析</span></button>
+                            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'settings' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Settings className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">設定</span></button>
                         </div>
                     </nav>
 
