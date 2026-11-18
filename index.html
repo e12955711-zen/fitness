@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>健身紀錄 (V15.4完美版)</title>
+    <title>健身紀錄 (V16終極專業版)</title>
     
     <!-- PWA 設定 -->
     <meta name="mobile-web-app-capable" content="yes">
@@ -23,6 +23,7 @@
         * { -webkit-tap-highlight-color: transparent; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .bg-gradient-brand { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
         .dark .bg-gradient-brand { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); }
         input[type=number]::-webkit-inner-spin-button, 
@@ -36,7 +37,7 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p>載入 V15.4 完美版...</p>
+            <p>載入 V16 終極專業版...</p>
         </div>
     </div>
 
@@ -50,10 +51,15 @@
             return `${year}-${month}-${day}`;
         };
 
-        // 全域部位對照表
+        const formatTimer = (seconds) => {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        };
+
         const BODY_PART_LABELS = { 'chest': '胸', 'back': '背', 'legs': '腿', 'shoulders': '肩', 'other': '其他' };
 
-        // --- Icons (加上 shrink-0 確保圖示永遠不會被擠壓變形) ---
+        // --- Icons (已徹底修復 Settings 齒輪路徑 H9/V9 的 Bug) ---
         const Icon = ({ path, className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 ${className || ''}`}>{path}</svg>
         );
@@ -70,7 +76,7 @@
             Trash2: (p) => <Icon {...p} path={<><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></>} />,
             Timer: (p) => <Icon {...p} path={<><line x1="10" y1="2" x2="14" y2="2" /><line x1="12" y1="14" x2="15" y2="11" /><circle cx="12" cy="14" r="8" /></>} />,
             Flame: (p) => <Icon {...p} path={<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.2-2.2.5-3z" />} />,
-            Settings: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></>} />,
+            Settings: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></>} />,
             Download: (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>} />,
             Upload: (p) => <Icon {...p} path={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></>} />,
             AlertCircle: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></>} />,
@@ -83,12 +89,62 @@
             Chart: (p) => <Icon {...p} path={<><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>} />,
             Check: (p) => <Icon {...p} path={<polyline points="20 6 9 17 4 12" />} />,
             Play: (p) => <Icon {...p} path={<polygon points="5 3 19 12 5 21 5 3" />} />,
+            Pause: (p) => <Icon {...p} path={<><rect x="6" y="4" width="4" height="16" /><rect x="14" y="4" width="4" height="16" /></>} />,
+            X: (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />,
+            RotateCcw: (p) => <Icon {...p} path={<><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></>} />,
         };
 
+        // --- 單日統計條組件 ---
+        const DailySummary = ({ dayLogs }) => {
+            const stats = useMemo(() => {
+                let volume = 0;
+                let sets = 0;
+                let cardioMins = 0;
+
+                dayLogs.forEach(l => {
+                    const s = l.sets || 1;
+                    if (l.type === 'strength') {
+                        volume += (l.weight || 0) * (l.reps || 0) * s;
+                        sets += s;
+                    } else if (l.type === 'interval') {
+                        sets += s;
+                    } else if (l.type === 'cardio') {
+                        cardioMins += (l.duration || 0);
+                    }
+                });
+
+                return { volume: Math.round(volume * 10) / 10, sets, cardioMins };
+            }, [dayLogs]);
+
+            if (dayLogs.length === 0) return null;
+
+            return (
+                <div className="flex gap-2 flex-wrap mb-3">
+                    {stats.volume > 0 && (
+                        <div className="bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center border border-blue-100 dark:border-blue-800/50">
+                            <Icons.Dumbbell className="w-3.5 h-3.5 mr-1.5" /> 容量: {stats.volume} kg
+                        </div>
+                    )}
+                    {stats.sets > 0 && (
+                        <div className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center border border-slate-200 dark:border-slate-700">
+                            總組數: {stats.sets} 組
+                        </div>
+                    )}
+                    {stats.cardioMins > 0 && (
+                        <div className="bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center border border-orange-100 dark:border-orange-800/50">
+                            <Icons.Flame className="w-3.5 h-3.5 mr-1.5" /> 有氧: {stats.cardioMins} 分
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- 專業級分析圖表組件 (致敬參考圖) ---
         const ChartView = ({ logs, isDarkMode }) => {
             const chartRef = useRef(null);
             const chartInstance = useRef(null);
             const [selectedExercise, setSelectedExercise] = useState('');
+            const [metric, setMetric] = useState('maxWeight'); // 'maxWeight' | 'volume' | 'oneRM' | 'sets'
 
             const exercises = useMemo(() => [...new Set(logs.map(l => l.exercise))].sort(), [logs]);
 
@@ -96,30 +152,81 @@
                 if (exercises.length > 0 && !selectedExercise) setSelectedExercise(exercises[0]);
             }, [exercises]);
 
-            useEffect(() => {
-                if (!selectedExercise || !chartRef.current) return;
-                const targetLogs = logs.filter(l => l.exercise === selectedExercise).sort((a, b) => new Date(a.date) - new Date(b.date));
-                if (targetLogs.length === 0) return;
+            // 整理該動作的每日聚合數據與歷史最佳紀錄 (PR)
+            const analysisData = useMemo(() => {
+                if (!selectedExercise) return null;
+                const targetLogs = logs.filter(l => l.exercise === selectedExercise);
+                if (targetLogs.length === 0) return null;
 
-                const logsByDate = {};
+                const firstType = targetLogs[0].type;
+                const byDate = {};
+
                 targetLogs.forEach(l => {
                     const d = l.date;
-                    if (!logsByDate[d]) logsByDate[d] = [];
-                    logsByDate[d].push(l);
+                    if (!byDate[d]) byDate[d] = { volume: 0, maxWeight: 0, max1RM: 0, sets: 0, duration: 0, distance: 0 };
+                    const s = l.sets || 1;
+                    const w = l.weight || 0;
+                    const r = l.reps || 0;
+
+                    if (l.type === 'strength' || l.type === 'interval') {
+                        byDate[d].volume += (w * r * s);
+                        if (w > byDate[d].maxWeight) byDate[d].maxWeight = w;
+                        const est1RM = r > 0 ? Math.round(w * (1 + r / 30) * 10) / 10 : w;
+                        if (est1RM > byDate[d].max1RM) byDate[d].max1RM = est1RM;
+                        byDate[d].sets += s;
+                    } else if (l.type === 'cardio') {
+                        byDate[d].duration += (l.duration || 0);
+                        byDate[d].distance += (l.distance || 0);
+                    }
                 });
 
-                const labels = Object.keys(logsByDate).sort();
-                let data = [], label = '', borderColor = '#3b82f6';
+                const sortedDates = Object.keys(byDate).sort((a, b) => new Date(a) - new Date(b));
+                
+                // 計算歷史 PR
+                let prVolume = 0, prWeight = 0, pr1RM = 0, prDuration = 0;
+                sortedDates.forEach(d => {
+                    if (byDate[d].volume > prVolume) prVolume = byDate[d].volume;
+                    if (byDate[d].maxWeight > prWeight) prWeight = byDate[d].maxWeight;
+                    if (byDate[d].max1RM > pr1RM) pr1RM = byDate[d].max1RM;
+                    if (byDate[d].duration > prDuration) prDuration = byDate[d].duration;
+                });
 
-                const firstLog = targetLogs[0];
-                if (firstLog.type === 'strength' || firstLog.type === 'interval') {
-                    label = '最大重量 (kg)';
-                    data = labels.map(d => Math.max(...logsByDate[d].map(l => l.weight || 0)));
-                    if (firstLog.type === 'interval') borderColor = '#9333ea';
-                } else {
-                    label = '總時間 (min)';
-                    data = labels.map(d => logsByDate[d].reduce((sum, l) => sum + (l.duration || 0), 0));
+                return { firstType, byDate, sortedDates, prVolume: Math.round(prVolume * 10) / 10, prWeight, pr1RM, prDuration };
+            }, [selectedExercise, logs]);
+
+            useEffect(() => {
+                if (!analysisData || !chartRef.current) return;
+                const { firstType, byDate, sortedDates } = analysisData;
+
+                let data = [], label = '', borderColor = '#3b82f6', bgColor = 'rgba(59, 130, 246, 0.15)';
+
+                if (firstType === 'cardio') {
+                    label = '時間 (分鐘)';
+                    data = sortedDates.map(d => byDate[d].duration);
                     borderColor = '#f97316';
+                    bgColor = 'rgba(249, 115, 22, 0.15)';
+                } else {
+                    if (metric === 'volume') {
+                        label = '訓練容量 (kg)';
+                        data = sortedDates.map(d => Math.round(byDate[d].volume * 10) / 10);
+                        borderColor = '#ef4444'; // Red like reference image
+                        bgColor = 'rgba(239, 68, 68, 0.15)';
+                    } else if (metric === 'sets') {
+                        label = '總組數';
+                        data = sortedDates.map(d => byDate[d].sets);
+                        borderColor = '#eab308'; // Yellow like reference image
+                        bgColor = 'rgba(234, 179, 8, 0.15)';
+                    } else if (metric === 'oneRM') {
+                        label = '1RM 預測 (kg)';
+                        data = sortedDates.map(d => byDate[d].max1RM);
+                        borderColor = '#06b6d4'; // Cyan like reference image
+                        bgColor = 'rgba(6, 182, 212, 0.15)';
+                    } else {
+                        label = '最大重量 (kg)';
+                        data = sortedDates.map(d => byDate[d].maxWeight);
+                        borderColor = '#22c55e'; // Green like reference image
+                        bgColor = 'rgba(34, 197, 94, 0.15)';
+                    }
                 }
 
                 if (chartInstance.current) chartInstance.current.destroy();
@@ -127,30 +234,93 @@
                 chartInstance.current = new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: labels.map(d => d.slice(5)),
-                        datasets: [{ label, data, borderColor, backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.1)', borderWidth: 3, pointBackgroundColor: isDarkMode ? '#fff' : '#fff', pointBorderColor: borderColor, pointRadius: 5, tension: 0.3, fill: true }]
+                        labels: sortedDates.map(d => d.slice(5).replace('-', '/')),
+                        datasets: [{ 
+                            label, data, borderColor, backgroundColor: bgColor, 
+                            borderWidth: 3, pointBackgroundColor: isDarkMode ? '#1e293b' : '#fff', 
+                            pointBorderColor: borderColor, pointBorderWidth: 2.5, pointRadius: 5, 
+                            tension: 0.25, fill: true 
+                        }]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { labels: { color: isDarkMode ? '#cbd5e1' : '#475569' } } },
-                        scales: { x: { grid: { display: false }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b' } }, y: { grid: { color: isDarkMode ? '#334155' : '#e2e8f0' }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b' }, beginAtZero: true } }
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                mode: 'index', intersect: false,
+                                backgroundColor: isDarkMode ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                                titleColor: isDarkMode ? '#fff' : '#0f172a',
+                                bodyColor: borderColor,
+                                bodyFont: { weight: 'bold', size: 14 },
+                                borderColor: borderColor, borderWidth: 1, padding: 10
+                            }
+                        },
+                        scales: { 
+                            x: { grid: { display: false }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b', font: { size: 11 } } }, 
+                            y: { position: 'right', grid: { color: isDarkMode ? '#334155' : '#f1f5f9' }, ticks: { color: isDarkMode ? '#94a3b8' : '#64748b', font: { size: 11 } }, beginAtZero: false } 
+                        }
                     }
                 });
                 return () => { if (chartInstance.current) chartInstance.current.destroy(); };
-            }, [selectedExercise, logs, isDarkMode]);
+            }, [analysisData, metric, isDarkMode]);
 
             return (
                 <div className="space-y-4 animate-in fade-in duration-300">
+                    {/* 動作選擇器 */}
                     <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-                        <label className="text-sm text-slate-500 dark:text-slate-400 mb-2 block font-bold">選擇分析動作</label>
-                        <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-slate-700">{exercises.map((ex, idx) => <option key={idx} value={ex}>{ex}</option>)}</select>
+                        <label className="text-xs text-slate-400 mb-1.5 block font-bold uppercase tracking-wider">選擇分析動作</label>
+                        <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-slate-800 text-base">
+                            {exercises.map((ex, idx) => <option key={idx} value={ex}>{ex}</option>)}
+                        </select>
                     </div>
-                    {selectedExercise && <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 h-80 relative"><canvas ref={chartRef}></canvas></div>}
-                    {exercises.length === 0 && <div className="text-center py-20 text-slate-400">尚無數據可分析</div>}
+
+                    {analysisData && (
+                        <>
+                            {/* PR 歷史最佳紀錄看板 (致敬參考圖) */}
+                            {analysisData.firstType !== 'cardio' ? (
+                                <div className="grid grid-cols-3 gap-2.5">
+                                    <div className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                        <div className="text-xs font-bold text-red-500 mb-1">容量紀錄</div>
+                                        <div className="text-lg font-black text-slate-800 dark:text-white">{analysisData.prVolume} <span className="text-xs font-normal text-slate-400">kg</span></div>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                        <div className="text-xs font-bold text-green-500 mb-1">重量紀錄</div>
+                                        <div className="text-lg font-black text-slate-800 dark:text-white">{analysisData.prWeight} <span className="text-xs font-normal text-slate-400">kg</span></div>
+                                    </div>
+                                    <div className="bg-white dark:bg-slate-800 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                        <div className="text-xs font-bold text-cyan-500 mb-1">1RM 預測</div>
+                                        <div className="text-lg font-black text-slate-800 dark:text-white">{analysisData.pr1RM} <span className="text-xs font-normal text-slate-400">kg</span></div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex justify-between items-center">
+                                    <span className="text-sm font-bold text-orange-500">最長單次時間紀錄</span>
+                                    <span className="text-xl font-black text-slate-800 dark:text-white">{analysisData.prDuration} <span className="text-xs font-normal text-slate-400">分鐘</span></span>
+                                </div>
+                            )}
+
+                            {/* 圖表指標切換與畫布 */}
+                            <div className="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 space-y-4">
+                                {analysisData.firstType !== 'cardio' && (
+                                    <div className="flex bg-slate-100 dark:bg-slate-700/70 p-1 rounded-xl gap-1">
+                                        <button onClick={() => setMetric('maxWeight')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${metric === 'maxWeight' ? 'bg-white dark:bg-slate-800 text-green-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>最大重量</button>
+                                        <button onClick={() => setMetric('volume')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${metric === 'volume' ? 'bg-white dark:bg-slate-800 text-red-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>容量</button>
+                                        <button onClick={() => setMetric('oneRM')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${metric === 'oneRM' ? 'bg-white dark:bg-slate-800 text-cyan-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>1RM 預測</button>
+                                        <button onClick={() => setMetric('sets')} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${metric === 'sets' ? 'bg-white dark:bg-slate-800 text-yellow-500 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}>組數</button>
+                                    </div>
+                                )}
+                                <div className="h-64 relative">
+                                    <canvas ref={chartRef}></canvas>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                    {exercises.length === 0 && <div className="text-center py-20 text-slate-400">尚無數據可分析，快去新增訓練吧！</div>}
                 </div>
             );
         };
 
+        // --- 月曆組件 ---
         const CalendarView = ({ logs, selectedDate, onSelectDate }) => {
             const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
             const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -193,7 +363,7 @@
             }
 
             return (
-                <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-6">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 mb-4">
                     <div className="flex justify-between items-center mb-4 px-2">
                         <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full"><Icons.ChevronLeft className="w-5 h-5 text-slate-500" /></button>
                         <h2 className="font-bold text-lg text-slate-800 dark:text-white">{currentMonth.getFullYear()}年 {currentMonth.getMonth() + 1}月</h2>
@@ -205,15 +375,15 @@
             );
         };
 
-        const LogGroup = ({ logs, onDelete }) => {
+        // --- 運動分組卡片組件 ---
+        const LogGroup = ({ logs, onDelete, onResume }) => {
             const grouped = useMemo(() => {
                 const groups = new Map();
-                // 先照 ID(時間戳) 由舊到新排序，確保動作出現的順序是完全依照建立的先後順序
                 const sortedLogs = [...logs].sort((a, b) => a.id - b.id);
                 sortedLogs.forEach(log => {
                     const key = `${log.exercise}-${log.type}`;
-                    if (!groups.has(key)) groups.set(key, { ...log, sets: [] });
-                    groups.get(key).sets.push(log);
+                    if (!groups.has(key)) groups.set(key, { ...log, setsList: [] });
+                    groups.get(key).setsList.push(log);
                 });
                 return Array.from(groups.values());
             }, [logs]);
@@ -222,32 +392,41 @@
                 <div className="space-y-4">
                     {grouped.map((group, idx) => (
                         <div key={idx} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
-                            <div className="p-4 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
+                            <div className="p-3.5 bg-slate-50 dark:bg-slate-700/50 flex items-center justify-between">
+                                <div className="flex items-center gap-2.5 min-w-0">
                                     {/* 順序數字 Badge */}
-                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 font-bold text-xs shrink-0">
+                                    <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs shrink-0 shadow-sm">
                                         {idx + 1}
                                     </span>
-                                    
-                                    <div className={`p-2 rounded-lg shrink-0 ${group.type === 'interval' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : group.type === 'cardio' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
-                                        {group.type === 'interval' ? <Icons.Timer className="w-4 h-4"/> : group.type === 'cardio' ? <Icons.Flame className="w-4 h-4"/> : <Icons.Dumbbell className="w-4 h-4"/>}
-                                    </div>
                                     <span className="font-bold text-slate-800 dark:text-white truncate">{group.exercise}</span>
-                                    {group.bodyPart && <span className="text-xs px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 shrink-0">{BODY_PART_LABELS[group.bodyPart] || group.bodyPart}</span>}
+                                    {group.bodyPart && <span className="text-xs px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 shrink-0 font-medium">{BODY_PART_LABELS[group.bodyPart] || group.bodyPart}</span>}
                                 </div>
+                                {onResume && (
+                                    <button 
+                                        onClick={() => onResume(group.exercise, group.type, group.bodyPart)}
+                                        className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2.5 py-1.5 rounded-lg hover:bg-blue-100 transition-colors shrink-0 ml-2"
+                                    >
+                                        + 加組 / 編輯
+                                    </button>
+                                )}
                             </div>
                             <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                                {group.sets.map((set, sIdx) => (
+                                {group.setsList.map((set, sIdx) => (
                                     <div key={set.id} className="p-3 flex items-center justify-between text-sm hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                                         <div className="flex items-center gap-4">
-                                            <span className="text-slate-400 font-mono w-6 text-center">{sIdx + 1}</span>
-                                            <div className="text-slate-700 dark:text-slate-300 font-bold">
-                                                {set.type === 'strength' && <>{set.weight}kg <span className="text-slate-400 font-normal mx-1">×</span> {set.reps}下</>}
-                                                {set.type === 'cardio' && <>{set.duration}分 <span className="text-slate-400 font-normal mx-1">/</span> {set.distance}km</>}
-                                                {set.type === 'interval' && <>{set.weight ? set.weight+'kg | ' : ''}{set.workTime}s/{set.restTime}s</>}
+                                            <span className="text-slate-400 font-mono w-6 text-center text-xs">#{sIdx + 1}</span>
+                                            <div className="text-slate-700 dark:text-slate-200 font-bold">
+                                                {set.type === 'strength' && (
+                                                    <>
+                                                        {set.weight} kg <span className="text-slate-400 font-normal mx-1">×</span> {set.reps} 下
+                                                        {set.sets > 1 && <span className="ml-2 text-xs text-blue-500">({set.sets}組)</span>}
+                                                    </>
+                                                )}
+                                                {set.type === 'cardio' && <>{set.duration} 分鐘 {set.distance ? <><span className="text-slate-400 font-normal mx-1">/</span>{set.distance} km</> : ''}</>}
+                                                {set.type === 'interval' && <>{set.weight ? set.weight+' kg | ' : ''}做 {set.workTime}s / 休 {set.restTime}s {set.sets > 1 ? `× ${set.sets}組` : ''}</>}
                                             </div>
                                         </div>
-                                        <button onClick={() => onDelete(set.id)} className="text-slate-300 hover:text-red-500 p-2"><Icons.Trash2 className="w-4 h-4"/></button>
+                                        <button onClick={() => onDelete(set.id)} className="text-slate-300 hover:text-red-500 p-1.5"><Icons.Trash2 className="w-4 h-4"/></button>
                                     </div>
                                 ))}
                             </div>
@@ -257,6 +436,7 @@
             );
         };
 
+        // --- 主程式 ---
         function FitnessApp() {
             const [logs, setLogs] = useState([]);
             const [activeTab, setActiveTab] = useState('record'); 
@@ -267,6 +447,10 @@
             const [exercise, setExercise] = useState('');
             const [isSessionActive, setIsSessionActive] = useState(false);
             const [currentSets, setCurrentSets] = useState([]); 
+
+            // 組間休息計時器狀態
+            const [restTimer, setRestTimer] = useState(0);
+            const [isTimerRunning, setIsTimerRunning] = useState(false);
 
             const [historyDate, setHistoryDate] = useState(formatDate(new Date()));
             const [darkMode, setDarkMode] = useState(false);
@@ -284,6 +468,19 @@
                 if (isDark) { document.documentElement.classList.add('dark'); updateMetaThemeColor('#0f172a'); } 
                 else { updateMetaThemeColor('#2563eb'); }
             }, []);
+
+            // 組間計時器 Effect
+            useEffect(() => {
+                let interval = null;
+                if (isTimerRunning) {
+                    interval = setInterval(() => {
+                        setRestTimer((prev) => prev + 1);
+                    }, 1000);
+                } else {
+                    clearInterval(interval);
+                }
+                return () => clearInterval(interval);
+            }, [isTimerRunning]);
 
             const updateMetaThemeColor = (color) => {
                 let meta = document.querySelector('meta[name="theme-color"]');
@@ -304,28 +501,101 @@
                 return [...new Set(historyExercises)].sort();
             }, [bodyPart, logs]);
 
-            const startSession = () => {
-                if(!exercise.trim()) return;
+            // 智慧啟動訓練 (載入今日已練組數 + 上次歷史所有組數)
+            const startSession = (customEx, customType, customPart) => {
+                const targetEx = (typeof customEx === 'string' ? customEx : exercise).trim();
+                const targetType = customType || workoutType;
+                const targetPart = customPart || bodyPart;
+
+                if (!targetEx) return;
+                setExercise(targetEx);
+                setWorkoutType(targetType);
+                if (targetPart) setBodyPart(targetPart);
                 setIsSessionActive(true);
-                const history = logs.filter(l => l.exercise === exercise).sort((a,b) => new Date(b.date) - new Date(a.date));
-                const last = history[0];
-                const initialSet = {
-                    id: Date.now(),
-                    weight: last ? last.weight : '', reps: last ? last.reps : '',
-                    duration: last ? last.duration : '', distance: last ? last.distance : '',
-                    workTime: last ? last.workTime : '', restTime: last ? last.restTime : '',
-                    completed: false
-                };
-                setCurrentSets([initialSet]);
+
+                // 1. 檢查「今天」是否已經有這個動作的紀錄
+                const todayExisting = logs
+                    .filter(l => l.date === date && l.exercise === targetEx && l.type === targetType)
+                    .sort((a, b) => a.id - b.id);
+
+                // 2. 尋找「過去最近一天」做這個動作的所有組數 (作為預設帶入與參考)
+                const pastLogs = logs
+                    .filter(l => l.date !== date && l.exercise === targetEx && l.type === targetType)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                let lastDaySets = [];
+                if (pastLogs.length > 0) {
+                    const lastDate = pastLogs[0].date;
+                    const rawLastSets = pastLogs
+                        .filter(l => l.date === lastDate)
+                        .sort((a, b) => a.id - b.id);
+                    
+                    // 相容舊版 (如果舊紀錄一筆寫了 sets: 4，自動展開成 4 列)
+                    rawLastSets.forEach(l => {
+                        const count = l.sets || 1;
+                        for (let i = 0; i < count; i++) {
+                            lastDaySets.push(l);
+                        }
+                    });
+                }
+
+                if (todayExisting.length > 0) {
+                    // 如果今天已經練過，載入今天已完成的組數，並在最後自動加一組待完成
+                    const loadedRows = todayExisting.map((l, idx) => {
+                        const prevRef = lastDaySets[idx];
+                        return {
+                            id: l.id,
+                            weight: l.weight ?? '', reps: l.reps ?? '',
+                            duration: l.duration ?? '', distance: l.distance ?? '',
+                            workTime: l.workTime ?? '', restTime: l.restTime ?? '',
+                            prevText: prevRef ? (targetType === 'strength' ? `${prevRef.weight}kg×${prevRef.reps}` : `${prevRef.duration || prevRef.workTime}`) : '-',
+                            completed: true
+                        };
+                    });
+                    const lastRow = loadedRows[loadedRows.length - 1];
+                    const nextRef = lastDaySets[loadedRows.length];
+                    loadedRows.push({
+                        id: Date.now() + Math.random(),
+                        weight: nextRef ? (nextRef.weight ?? '') : lastRow.weight,
+                        reps: nextRef ? (nextRef.reps ?? '') : lastRow.reps,
+                        duration: nextRef ? (nextRef.duration ?? '') : lastRow.duration,
+                        distance: nextRef ? (nextRef.distance ?? '') : lastRow.distance,
+                        workTime: nextRef ? (nextRef.workTime ?? '') : lastRow.workTime,
+                        restTime: nextRef ? (nextRef.restTime ?? '') : lastRow.restTime,
+                        prevText: nextRef ? (targetType === 'strength' ? `${nextRef.weight}kg×${nextRef.reps}` : `${nextRef.duration || nextRef.workTime}`) : '-',
+                        completed: false
+                    });
+                    setCurrentSets(loadedRows);
+                } else if (lastDaySets.length > 0) {
+                    // 如果今天還沒練，但以前練過：直接鋪好上次練的所有組數！
+                    const prefilledRows = lastDaySets.map((l, idx) => ({
+                        id: Date.now() + idx,
+                        weight: l.weight ?? '', reps: l.reps ?? '',
+                        duration: l.duration ?? '', distance: l.distance ?? '',
+                        workTime: l.workTime ?? '', restTime: l.restTime ?? '',
+                        prevText: targetType === 'strength' ? `${l.weight}kg×${l.reps}` : (targetType === 'cardio' ? `${l.duration}分` : `${l.workTime}s/${l.restTime}s`),
+                        completed: false
+                    }));
+                    setCurrentSets(prefilledRows);
+                } else {
+                    // 全新動作，給 1 組空白列
+                    setCurrentSets([{
+                        id: Date.now(),
+                        weight: '', reps: '', duration: '', distance: '', workTime: '30', restTime: '90',
+                        prevText: '無紀錄',
+                        completed: false
+                    }]);
+                }
             };
 
             const addNewSetRow = () => {
                 const prevSet = currentSets[currentSets.length - 1];
                 setCurrentSets([...currentSets, {
-                    id: Date.now(),
+                    id: Date.now() + Math.random(),
                     weight: prevSet ? prevSet.weight : '', reps: prevSet ? prevSet.reps : '',
                     duration: prevSet ? prevSet.duration : '', distance: prevSet ? prevSet.distance : '',
                     workTime: prevSet ? prevSet.workTime : '', restTime: prevSet ? prevSet.restTime : '',
+                    prevText: '-',
                     completed: false
                 }]);
             };
@@ -336,10 +606,26 @@
                 setCurrentSets(newSets);
             };
 
+            // 切換完成與解鎖修改 (不再誤刪)
             const toggleSetCompletion = (index) => {
                 const set = currentSets[index];
-                if (set.completed) return;
-                if (workoutType === 'strength' && (!set.weight && !set.reps)) return;
+                
+                if (set.completed) {
+                    // 解鎖該組：從 logs 移除，但保留在畫面上讓使用者修改數字
+                    const updatedLogs = logs.filter(l => l.id !== set.id);
+                    setLogs(updatedLogs);
+                    localStorage.setItem('fitnessLogs', JSON.stringify(updatedLogs));
+                    
+                    const newSets = [...currentSets];
+                    newSets[index].completed = false;
+                    setCurrentSets(newSets);
+                    return;
+                }
+
+                // 檢查必填
+                if (workoutType === 'strength' && (set.weight === '' || set.reps === '')) return;
+                if (workoutType === 'cardio' && set.duration === '') return;
+                if (workoutType === 'interval' && (set.workTime === '' || set.restTime === '')) return;
                 
                 const newLog = {
                     id: set.id, date, exercise: exercise.trim(), type: workoutType,
@@ -353,22 +639,40 @@
                     restTime: workoutType === 'interval' ? parseInt(set.restTime || 0) : null,
                 };
 
-                const updatedLogs = [newLog, ...logs];
-                setLogs(updatedLogs); localStorage.setItem('fitnessLogs', JSON.stringify(updatedLogs));
-                const newSets = [...currentSets]; newSets[index].completed = true; setCurrentSets(newSets);
-                setShowSuccess(true); setTimeout(() => setShowSuccess(false), 1500);
+                const updatedLogs = [...logs, newLog];
+                setLogs(updatedLogs);
+                localStorage.setItem('fitnessLogs', JSON.stringify(updatedLogs));
+                
+                const newSets = [...currentSets];
+                newSets[index].completed = true;
+                setCurrentSets(newSets);
+
+                // 啟動/重置組間休息計時器
+                setRestTimer(0);
+                setIsTimerRunning(true);
+
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 1200);
             };
 
             const deleteSetRow = (index) => {
                 const set = currentSets[index];
                 if (set.completed) {
                     const updatedLogs = logs.filter(l => l.id !== set.id);
-                    setLogs(updatedLogs); localStorage.setItem('fitnessLogs', JSON.stringify(updatedLogs));
+                    setLogs(updatedLogs);
+                    localStorage.setItem('fitnessLogs', JSON.stringify(updatedLogs));
                 }
                 setCurrentSets(currentSets.filter((_, i) => i !== index));
             };
 
-            const endSession = () => { setIsSessionActive(false); setExercise(''); setCurrentSets([]); };
+            const endSession = () => { 
+                setIsSessionActive(false); 
+                setExercise(''); 
+                setCurrentSets([]); 
+                setIsTimerRunning(false);
+                setRestTimer(0);
+            };
+
             const initiateDelete = (id) => { setDeleteTargetId(id); setIsClearingAll(false); };
             const initiateClearAll = () => { setDeleteTargetId('ALL'); setIsClearingAll(true); };
             const confirmDelete = () => {
@@ -412,14 +716,27 @@
                 <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans flex flex-col w-full transition-colors duration-300">
                     <header className="bg-gradient-brand text-white p-4 shadow-lg sticky top-0 z-20 transition-all duration-300">
                         <div className="flex items-center justify-between max-w-md mx-auto">
-                            <div className="flex items-center gap-2"><Icons.Activity className="w-6 h-6" /><h1 className="text-xl font-bold tracking-wide">
-                                {activeTab === 'record' && (isSessionActive ? exercise : '訓練紀錄')}
-                                {activeTab === 'history' && '歷史回顧'}
-                                {activeTab === 'analysis' && '數據分析'}
-                                {activeTab === 'settings' && '資料設定'}
-                            </h1></div>
-                            {!isSessionActive && <button onClick={toggleDarkMode} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all active:scale-95">{darkMode ? <Icons.Sun className="w-5 h-5" /> : <Icons.Moon className="w-5 h-5" />}</button>}
-                            {isSessionActive && <button onClick={endSession} className="text-sm font-bold bg-white/20 px-3 py-1.5 rounded-lg hover:bg-white/30">結束動作</button>}
+                            <div className="flex items-center gap-2 min-w-0">
+                                <Icons.Activity className="w-6 h-6" />
+                                <h1 className="text-xl font-bold tracking-wide truncate">
+                                    {activeTab === 'record' && (isSessionActive ? exercise : '訓練紀錄')}
+                                    {activeTab === 'history' && '歷史回顧'}
+                                    {activeTab === 'analysis' && '數據分析'}
+                                    {activeTab === 'settings' && '資料設定'}
+                                </h1>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                {!isSessionActive && (
+                                    <button onClick={toggleDarkMode} className="p-2 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all active:scale-95">
+                                        {darkMode ? <Icons.Sun className="w-5 h-5" /> : <Icons.Moon className="w-5 h-5" />}
+                                    </button>
+                                )}
+                                {isSessionActive && (
+                                    <button onClick={endSession} className="text-sm font-bold bg-white text-blue-600 px-3.5 py-1.5 rounded-xl shadow-sm active:scale-95 transition-transform">
+                                        完成訓練
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </header>
 
@@ -428,91 +745,186 @@
                             <div className="space-y-6 animate-in fade-in duration-300">
                                 {!isSessionActive ? (
                                     <>
-                                    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm p-5 border border-slate-100 dark:border-slate-700 transition-colors">
-                                        <div className="relative group mb-5">
-                                            <div className="absolute left-3 top-3.5 w-5 h-5 text-slate-400"><Icons.Calendar className="w-full h-full" /></div>
-                                            <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all" />
-                                        </div>
-                                        <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-2xl mb-5">
-                                            <button type="button" onClick={() => setWorkoutType('strength')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'strength' ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Dumbbell className="w-4 h-4 mr-1" /> 重訓</button>
-                                            <button type="button" onClick={() => setWorkoutType('interval')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'interval' ? 'bg-white dark:bg-slate-600 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Timer className="w-4 h-4 mr-1" /> 計時</button>
-                                            <button type="button" onClick={() => setWorkoutType('cardio')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'cardio' ? 'bg-white dark:bg-slate-600 text-orange-500 dark:text-orange-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Flame className="w-4 h-4 mr-1" /> 有氧</button>
-                                        </div>
-                                        {workoutType === 'strength' && (
-                                            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-4">
-                                                {Object.keys(BODY_PART_LABELS).map(key => (
-                                                    <button key={key} type="button" onClick={() => setBodyPart(key)} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${bodyPart === key ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none' : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-600'}`}>{BODY_PART_LABELS[key]}</button>
-                                                ))}
+                                        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm p-5 border border-slate-100 dark:border-slate-700 transition-colors">
+                                            <div className="relative group mb-5">
+                                                <div className="absolute left-3 top-3.5 w-5 h-5 text-slate-400"><Icons.Calendar className="w-full h-full" /></div>
+                                                <input type="date" required value={date} onChange={(e) => setDate(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all font-bold" />
                                             </div>
-                                        )}
-                                        <div className="relative group mb-4">
-                                            <input type="text" list="exercise-list" placeholder="輸入動作名稱 (如: 深蹲)..." 
-                                                value={exercise} onChange={(e) => setExercise(e.target.value)}
-                                                className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400 transition-all font-bold text-center text-lg" 
-                                            />
-                                            {workoutType === 'strength' && <datalist id="exercise-list">{availableExercises.map((ex, idx) => <option key={idx} value={ex} />)}</datalist>}
-                                        </div>
-                                        <button 
-                                            onClick={startSession} 
-                                            disabled={!exercise.trim()}
-                                            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center text-lg"
-                                        >
-                                            <Icons.Play className="w-5 h-5 mr-2 fill-current" /> 開始訓練
-                                        </button>
-                                    </div>
-                                    
-                                    <div className="space-y-3">
-                                        <h3 className="text-xs font-bold text-slate-400 px-1 uppercase tracking-wider">今日已完成</h3>
-                                        {getLogsByDate(date).length === 0 ? <p className="text-center text-slate-400 text-sm py-4">今天還沒有紀錄</p> : 
-                                            <LogGroup logs={getLogsByDate(date)} onDelete={initiateDelete} />
-                                        }
-                                    </div>
-                                    </>
-                                ) : (
-                                    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
-                                        <div className="p-4 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 flex justify-between text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                            <div className="w-10 text-center">組數</div>
-                                            <div className="flex-1 text-center">{workoutType === 'strength' ? 'kg' : (workoutType === 'cardio' ? '分' : 'kg')}</div>
-                                            <div className="flex-1 text-center">{workoutType === 'strength' ? '下' : (workoutType === 'cardio' ? 'km' : '秒/秒')}</div>
-                                            <div className="w-10 text-center">狀態</div>
-                                        </div>
-                                        
-                                        <div className="divide-y divide-slate-100 dark:divide-slate-700">
-                                            {currentSets.map((set, idx) => (
-                                                <div key={set.id} className={`p-3 flex items-center justify-between transition-all ${set.completed ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
-                                                    <div className="w-10 text-center font-mono font-bold text-slate-400">{idx + 1}</div>
-                                                    <div className="flex-1 px-1">
-                                                        <input type="number" value={workoutType === 'cardio' ? set.duration : set.weight} onChange={(e) => updateSet(idx, workoutType === 'cardio' ? 'duration' : 'weight', e.target.value)} placeholder="-" disabled={set.completed} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-transparent" />
-                                                    </div>
-                                                    <div className="flex-1 px-1">
-                                                        {workoutType === 'interval' ? (
-                                                            <div className="flex gap-1">
-                                                                <input type="number" value={set.workTime} onChange={(e) => updateSet(idx, 'workTime', e.target.value)} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold text-xs" placeholder="做" disabled={set.completed} />
-                                                                <input type="number" value={set.restTime} onChange={(e) => updateSet(idx, 'restTime', e.target.value)} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold text-xs" placeholder="休" disabled={set.completed} />
-                                                            </div>
-                                                        ) : (
-                                                            <input type="number" value={workoutType === 'cardio' ? set.distance : set.reps} onChange={(e) => updateSet(idx, workoutType === 'cardio' ? 'distance' : 'reps', e.target.value)} placeholder="-" disabled={set.completed} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-lg py-2 text-center font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:bg-transparent" />
-                                                        )}
-                                                    </div>
-                                                    <div className="w-10 flex justify-center">
-                                                        <button onClick={() => set.completed ? deleteSetRow(idx) : toggleSetCompletion(idx)} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${set.completed ? 'bg-green-500 text-white shadow-green-200' : 'bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-400'}`}>
-                                                            {set.completed ? <Icons.Check className="w-5 h-5" /> : <div className="w-3 h-3 rounded-sm bg-current opacity-50 shrink-0"></div>}
-                                                        </button>
+                                            <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-2xl mb-5">
+                                                <button type="button" onClick={() => setWorkoutType('strength')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'strength' ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Dumbbell className="w-4 h-4 mr-1" /> 重訓</button>
+                                                <button type="button" onClick={() => setWorkoutType('interval')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'interval' ? 'bg-white dark:bg-slate-600 text-purple-600 dark:text-purple-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Timer className="w-4 h-4 mr-1" /> 計時</button>
+                                                <button type="button" onClick={() => setWorkoutType('cardio')} className={`flex-1 py-2.5 text-xs font-bold rounded-xl transition-all flex items-center justify-center ${workoutType === 'cardio' ? 'bg-white dark:bg-slate-600 text-orange-500 dark:text-orange-400 shadow-sm' : 'text-slate-400 dark:text-slate-400'}`}><Icons.Flame className="w-4 h-4 mr-1" /> 有氧</button>
+                                            </div>
+                                            {workoutType === 'strength' && (
+                                                <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1 mb-4">
+                                                    {Object.keys(BODY_PART_LABELS).map(key => (
+                                                        <button key={key} type="button" onClick={() => { setBodyPart(key); setExercise(''); }} className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all border ${bodyPart === key ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none' : 'bg-white dark:bg-slate-700 text-slate-500 dark:text-slate-300 border-slate-200 dark:border-slate-600'}`}>{BODY_PART_LABELS[key]}</button>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* 歷史動作快速標籤 */}
+                                            {workoutType === 'strength' && availableExercises.length > 0 && (
+                                                <div className="mb-4">
+                                                    <div className="text-[11px] text-slate-400 mb-1.5 ml-1 font-bold">常練動作 (點擊直接載入)：</div>
+                                                    <div className="flex gap-1.5 flex-wrap">
+                                                        {availableExercises.map((ex, i) => (
+                                                            <button 
+                                                                key={i} type="button" 
+                                                                onClick={() => startSession(ex, workoutType, bodyPart)}
+                                                                className="text-xs bg-slate-100 dark:bg-slate-700/80 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl font-bold transition-colors border border-slate-200/60 dark:border-slate-600"
+                                                            >
+                                                                {ex}
+                                                            </button>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            ))}
+                                            )}
+
+                                            <div className="relative group mb-4">
+                                                <input type="text" list="exercise-list" placeholder={workoutType === 'interval' ? "輸入動作 (如: 壺鈴擺盪)..." : workoutType === 'cardio' ? "輸入動作 (如: 跑步機)..." : "輸入新動作名稱..."} 
+                                                    value={exercise} onChange={(e) => setExercise(e.target.value)}
+                                                    onKeyDown={(e) => { if(e.key === 'Enter' && exercise.trim()) startSession(); }}
+                                                    className="w-full px-4 py-3.5 bg-slate-50 dark:bg-slate-700 dark:text-white border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400 transition-all font-bold text-center text-lg" 
+                                                />
+                                                {workoutType === 'strength' && <datalist id="exercise-list">{availableExercises.map((ex, idx) => <option key={idx} value={ex} />)}</datalist>}
+                                            </div>
+                                            <button 
+                                                onClick={() => startSession()} 
+                                                disabled={!exercise.trim()}
+                                                className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 dark:shadow-none disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center text-lg active:scale-[0.98]"
+                                            >
+                                                <Icons.Play className="w-5 h-5 mr-2 fill-current" /> 開始訓練
+                                            </button>
                                         </div>
-                                        <button onClick={addNewSetRow} className="w-full py-4 bg-slate-50 dark:bg-slate-700/30 text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center"><Icons.Plus className="w-4 h-4 mr-2" /> 新增一組</button>
+                                        
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between px-1">
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">今日已完成 ({date})</h3>
+                                            </div>
+                                            <DailySummary dayLogs={getLogsByDate(date)} />
+                                            {getLogsByDate(date).length === 0 ? <p className="text-center text-slate-400 text-sm py-6">今天還沒有紀錄，點擊上方開始吧！</p> : 
+                                                <LogGroup logs={getLogsByDate(date)} onDelete={initiateDelete} onResume={startSession} />
+                                            }
+                                        </div>
+                                    </>
+                                ) : (
+                                    /* 專業級組數輸入表格 (Session Mode) */
+                                    <div className="space-y-4">
+                                        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden">
+                                            <div className="p-3.5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs font-bold text-slate-400 uppercase">
+                                                <div className="w-8 text-center">組</div>
+                                                <div className="w-20 text-center">上次紀錄</div>
+                                                <div className="flex-1 text-center">{workoutType === 'cardio' ? '時間(分)' : '重量(kg)'}</div>
+                                                <div className="flex-1 text-center">{workoutType === 'strength' ? '次數' : (workoutType === 'cardio' ? '距離(km)' : '做(秒)/休(秒)')}</div>
+                                                <div className="w-16 text-center">完成</div>
+                                            </div>
+                                            
+                                            <div className="divide-y divide-slate-100 dark:divide-slate-700">
+                                                {currentSets.map((set, idx) => (
+                                                    <div key={set.id} className={`p-2.5 flex items-center justify-between transition-colors ${set.completed ? 'bg-green-50/70 dark:bg-green-900/15' : ''}`}>
+                                                        <div className="w-8 text-center font-mono font-bold text-slate-400 text-sm">{idx + 1}</div>
+                                                        <div className="w-20 text-center text-[11px] text-slate-400 font-medium truncate px-1">{set.prevText || '-'}</div>
+                                                        
+                                                        <div className="flex-1 px-1">
+                                                            <input 
+                                                                type="number" step="0.5"
+                                                                value={workoutType === 'cardio' ? set.duration : set.weight} 
+                                                                onChange={(e) => updateSet(idx, workoutType === 'cardio' ? 'duration' : 'weight', e.target.value)} 
+                                                                placeholder="0" disabled={set.completed} 
+                                                                className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-xl py-2.5 text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:bg-transparent" 
+                                                            />
+                                                        </div>
+                                                        
+                                                        <div className="flex-1 px-1">
+                                                            {workoutType === 'interval' ? (
+                                                                <div className="flex gap-1">
+                                                                    <input type="number" value={set.workTime} onChange={(e) => updateSet(idx, 'workTime', e.target.value)} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-xl py-2.5 text-center font-bold text-xs" placeholder="做" disabled={set.completed} />
+                                                                    <input type="number" value={set.restTime} onChange={(e) => updateSet(idx, 'restTime', e.target.value)} className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-xl py-2.5 text-center font-bold text-xs" placeholder="休" disabled={set.completed} />
+                                                                </div>
+                                                            ) : (
+                                                                <input 
+                                                                    type="number" step="0.1"
+                                                                    value={workoutType === 'cardio' ? set.distance : set.reps} 
+                                                                    onChange={(e) => updateSet(idx, workoutType === 'cardio' ? 'distance' : 'reps', e.target.value)} 
+                                                                    placeholder="0" disabled={set.completed} 
+                                                                    className="w-full bg-slate-100 dark:bg-slate-900 dark:text-white rounded-xl py-2.5 text-center font-bold text-base focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:bg-transparent" 
+                                                                />
+                                                            )}
+                                                        </div>
+
+                                                        <div className="w-16 flex items-center justify-end gap-1 pr-1">
+                                                            <button 
+                                                                onClick={() => toggleSetCompletion(idx)} 
+                                                                title={set.completed ? "點擊解鎖修改" : "點擊完成此組"}
+                                                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shrink-0 ${set.completed ? 'bg-green-500 text-white shadow-md shadow-green-200 dark:shadow-none' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-blue-100'}`}
+                                                            >
+                                                                <Icons.Check className="w-5 h-5" />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => deleteSetRow(idx)}
+                                                                className="p-1 text-slate-300 hover:text-red-500 transition-colors"
+                                                            >
+                                                                <Icons.X className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            
+                                            <button onClick={addNewSetRow} className="w-full py-4 bg-slate-50 dark:bg-slate-700/30 text-blue-600 dark:text-blue-400 font-bold text-sm hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center">
+                                                <Icons.Plus className="w-4 h-4 mr-1.5" /> 新增組數
+                                            </button>
+                                        </div>
+
+                                        {/* 大型組間休息計時器看板 */}
+                                        <div className={`rounded-3xl p-5 border transition-all flex items-center justify-between shadow-sm ${isTimerRunning ? 'bg-blue-50/90 dark:bg-blue-900/25 border-blue-200 dark:border-blue-700' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
+                                            <div className="flex items-center gap-3.5">
+                                                <div className={`p-3.5 rounded-2xl transition-colors ${isTimerRunning ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none animate-pulse' : 'bg-slate-100 dark:bg-slate-700 text-slate-400'}`}>
+                                                    <Icons.Timer className="w-7 h-7" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-xs font-bold text-slate-400 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+                                                        {isTimerRunning ? '組間休息計時中...' : '組間休息計時器'}
+                                                    </div>
+                                                    <div className={`text-4xl font-mono font-black tracking-tight ${isTimerRunning ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                        {formatTimer(restTimer)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={() => setIsTimerRunning(!isTimerRunning)}
+                                                    className={`p-3.5 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center ${isTimerRunning ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400' : 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none'}`}
+                                                    title={isTimerRunning ? "暫停計時" : "開始計時"}
+                                                >
+                                                    {isTimerRunning ? <Icons.Pause className="w-6 h-6 fill-current" /> : <Icons.Play className="w-6 h-6 fill-current" />}
+                                                </button>
+                                                <button 
+                                                    onClick={() => { setRestTimer(0); setIsTimerRunning(false); }}
+                                                    className="p-3.5 rounded-2xl bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all active:scale-95 flex items-center justify-center"
+                                                    title="歸零重置"
+                                                >
+                                                    <Icons.RotateCcw className="w-6 h-6" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-center text-xs text-slate-400">
+                                            💡 提示：點擊「✓」即自動存檔並重新啟動休息計時；再點一下「✓」可解鎖修改數字。
+                                        </p>
                                     </div>
                                 )}
                             </div>
                         )}
 
                         {activeTab === 'history' && (
-                            <div className="space-y-6 animate-in fade-in duration-300">
+                            <div className="space-y-4 animate-in fade-in duration-300">
                                 <CalendarView logs={logs} selectedDate={historyDate} onSelectDate={setHistoryDate} />
                                 <div className="space-y-3">
-                                    {getLogsByDate(historyDate).length === 0 ? <p className="text-center text-slate-400 text-sm py-4">本日無紀錄</p> : <LogGroup logs={getLogsByDate(historyDate)} onDelete={initiateDelete} />}
+                                    <div className="px-1 text-xs font-bold text-slate-400 uppercase tracking-wider">{historyDate} 訓練紀錄</div>
+                                    <DailySummary dayLogs={getLogsByDate(historyDate)} />
+                                    {getLogsByDate(historyDate).length === 0 ? <p className="text-center text-slate-400 text-sm py-8">本日為休息日，無訓練紀錄</p> : <LogGroup logs={getLogsByDate(historyDate)} onDelete={initiateDelete} />}
                                 </div>
                             </div>
                         )}
@@ -524,7 +936,7 @@
                                 <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
                                     <div className="p-5 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700"><h2 className="font-bold text-slate-800 dark:text-white flex items-center"><Icons.Settings className="w-5 h-5 mr-2 text-slate-500" /> 資料管理</h2></div>
                                     <div className="p-5 space-y-6">
-                                        <div><h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">備份資料 (匯出)</h3><button onClick={handleExport} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center transition-colors shadow-lg shadow-emerald-200 dark:shadow-none"><Icons.Download className="w-5 h-5 mr-2" /> 下載備份檔</button></div>
+                                        <div><h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">備份資料 (匯出)</h3><button onClick={handleExport} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center transition-colors shadow-lg shadow-emerald-200 dark:shadow-none"><Icons.Download className="w-5 h-5 mr-2" /> 下載備份檔 (.json)</button></div>
                                         <div className="border-t border-slate-100 dark:border-slate-700"></div>
                                         <div><h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">還原資料 (匯入)</h3><input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" /><button onClick={handleImportClick} className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-2xl flex items-center justify-center transition-colors shadow-lg shadow-amber-200 dark:shadow-none"><Icons.Upload className="w-5 h-5 mr-2" /> 選擇備份檔匯入</button>{importMsg && <div className="mt-4 text-center text-sm font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 py-2 rounded-xl animate-pulse">{importMsg}</div>}</div>
                                     </div>
@@ -533,21 +945,21 @@
                                     <div className="p-5 bg-red-50 dark:bg-red-900/10 border-b border-red-100 dark:border-red-900/30"><h2 className="font-bold text-red-800 dark:text-red-400 flex items-center"><Icons.AlertCircle className="w-5 h-5 mr-2" /> 危險區域</h2></div>
                                     <div className="p-5"><button onClick={initiateClearAll} className="w-full border-2 border-red-100 dark:border-red-900 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold py-3.5 rounded-2xl flex items-center justify-center transition-colors">清空所有資料</button></div>
                                 </div>
-                                <div className="text-center text-xs text-slate-400 mt-8">Fitness Tracker V15.4 (Layout Fixed)</div>
+                                <div className="text-center text-xs text-slate-400 mt-8">Fitness Tracker V16.0 (Ultimate Pro)</div>
                             </div>
                         )}
                     </main>
 
                     <nav className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 fixed bottom-0 left-0 right-0 z-30 pb-safe transition-colors">
                         <div className="max-w-md mx-auto flex justify-between p-2 w-full">
-                            <button onClick={() => setActiveTab('record')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'record' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Plus className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">新增</span></button>
-                            <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'history' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.CalendarDays className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">歷史</span></button>
-                            <button onClick={() => setActiveTab('analysis')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'analysis' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Chart className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">分析</span></button>
-                            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'settings' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Settings className="w-6 h-6 mb-1" /><span className="text-[10px] sm:text-xs font-bold">設定</span></button>
+                            <button onClick={() => setActiveTab('record')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'record' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Plus className="w-6 h-6 mb-1" /><span className="text-[11px] font-bold">新增</span></button>
+                            <button onClick={() => setActiveTab('history')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'history' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.CalendarDays className="w-6 h-6 mb-1" /><span className="text-[11px] font-bold">歷史</span></button>
+                            <button onClick={() => setActiveTab('analysis')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'analysis' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Chart className="w-6 h-6 mb-1" /><span className="text-[11px] font-bold">分析</span></button>
+                            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 transition-all ${activeTab === 'settings' ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><Icons.Settings className="w-6 h-6 mb-1" /><span className="text-[11px] font-bold">設定</span></button>
                         </div>
                     </nav>
 
-                    {showSuccess && <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-slate-800 dark:bg-white text-white dark:text-slate-900 px-6 py-3 rounded-full shadow-2xl flex items-center animate-bounce z-50 font-bold"><span className="mr-2 text-green-400 dark:text-green-600">✓</span> 已儲存</div>}
+                    {showSuccess && <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-slate-800 dark:bg-white text-white dark:text-slate-900 px-5 py-2.5 rounded-full shadow-2xl flex items-center z-50 font-bold text-sm"><span className="mr-2 text-green-400 dark:text-green-600">✓</span> 已記錄此組</div>}
 
                     {deleteTargetId && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
